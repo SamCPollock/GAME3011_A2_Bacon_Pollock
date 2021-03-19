@@ -1,0 +1,8 @@
+﻿  Week7-2-TreeBillboardsApp.cpp
+D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\GAME3111_A2_Bacon_Pollock\Week7-2-TreeBillboardsApp.cpp(1249,2): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\GAME3111_A2_Bacon_Pollock\Week7-2-TreeBillboardsApp.cpp(1250,2): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\GAME3111_A2_Bacon_Pollock\Week7-2-TreeBillboardsApp.cpp(1251,2): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\GAME3111_A2_Bacon_Pollock\Week7-2-TreeBillboardsApp.cpp(1252,2): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\GAME3111_A2_Bacon_Pollock\Week7-2-TreeBillboardsApp.cpp(1255,2): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\GAME3111_A2_Bacon_Pollock\Week7-2-TreeBillboardsApp.cpp(1256,2): warning C4244: 'argument': conversion from 'double' to 'float', possible loss of data
+  GAME3111_A2_Bacon_Pollock.vcxproj -> D:\Repos\GAME3111\DirectX\GAME3111_A2_Bacon_Pollock\x64\Debug\GAME3111_A2_Bacon_Pollock.exe
