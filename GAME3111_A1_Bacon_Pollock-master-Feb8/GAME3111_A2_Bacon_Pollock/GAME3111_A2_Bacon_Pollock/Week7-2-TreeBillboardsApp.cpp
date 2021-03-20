@@ -557,14 +557,39 @@ void TreeBillboardsApp::LoadTextures()
 {
 	auto grassTex = std::make_unique<Texture>();
 	grassTex->Name = "grassTex";
-	grassTex->Filename = L"../../Textures/grass.dds";
+	grassTex->Filename = L"../../Textures/A2_Pixel_Grass.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), grassTex->Filename.c_str(),
 		grassTex->Resource, grassTex->UploadHeap));
 
+		//SAM ADDED
+	auto bricksTex = std::make_unique<Texture>();
+	bricksTex->Name = "bricksTex";
+	bricksTex->Filename = L"../../Textures/bricks.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), bricksTex->Filename.c_str(),
+		bricksTex->Resource, bricksTex->UploadHeap));
+
+	//SAM ADDED
+	auto checkerTex = std::make_unique<Texture>();
+	checkerTex->Name = "checkerTex";
+	checkerTex->Filename = L"../../Textures/checkboard.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), checkerTex->Filename.c_str(),
+		checkerTex->Resource, checkerTex->UploadHeap));
+
+	auto pixelWoodTex = std::make_unique<Texture>();
+	pixelWoodTex->Name = "pixelWoodTex";
+	pixelWoodTex->Filename = L"../../Textures/A2_Pixel_Wood.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), pixelWoodTex->Filename.c_str(),
+		pixelWoodTex->Resource, pixelWoodTex->UploadHeap));
+
+
+
 	auto waterTex = std::make_unique<Texture>();
 	waterTex->Name = "waterTex";
-	waterTex->Filename = L"../../Textures/water1.dds";
+	waterTex->Filename = L"../../Textures/A2_Pixel_Water.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), waterTex->Filename.c_str(),
 		waterTex->Resource, waterTex->UploadHeap));
@@ -587,6 +612,10 @@ void TreeBillboardsApp::LoadTextures()
 	mTextures[waterTex->Name] = std::move(waterTex);
 	mTextures[fenceTex->Name] = std::move(fenceTex);
 	mTextures[treeArrayTex->Name] = std::move(treeArrayTex);
+	mTextures[bricksTex->Name] = std::move(bricksTex);	// SAM ADDED
+	mTextures[checkerTex->Name] = std::move(checkerTex);	// SAM ADDED
+	mTextures[pixelWoodTex->Name] = std::move(pixelWoodTex);
+
 }
 
 void TreeBillboardsApp::BuildRootSignature()
@@ -635,7 +664,7 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 4;
+	srvHeapDesc.NumDescriptors = 7;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
@@ -649,7 +678,13 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	auto waterTex = mTextures["waterTex"]->Resource;
 	auto fenceTex = mTextures["fenceTex"]->Resource;
 	auto treeArrayTex = mTextures["treeArrayTex"]->Resource;
+	auto bricksTex = mTextures["bricksTex"]->Resource;	// SAM ADDED
+	auto checkerTex = mTextures["checkerTex"]->Resource;	// SAM ADDED
+	auto pixelWoodTex = mTextures["pixelWoodTex"]->Resource;
 
+
+
+	// descriptor 0
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = grassTex->GetDesc().Format;
@@ -658,19 +693,20 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	srvDesc.Texture2D.MipLevels = -1;
 	md3dDevice->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
 
-	// next descriptor
+
+	// descriptor 1
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	srvDesc.Format = waterTex->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
 
-	// next descriptor
+	// descriptor 2
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	srvDesc.Format = fenceTex->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
 
-	// next descriptor
+	// descriptor 3
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	auto desc = treeArrayTex->GetDesc();
@@ -680,7 +716,34 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	srvDesc.Texture2DArray.MipLevels = -1;
 	srvDesc.Texture2DArray.FirstArraySlice = 0;
 	srvDesc.Texture2DArray.ArraySize = treeArrayTex->GetDesc().DepthOrArraySize;
-	md3dDevice->CreateShaderResourceView(treeArrayTex.Get(), &srvDesc, hDescriptor);
+	md3dDevice->CreateShaderResourceView(treeArrayTex.Get(), &srvDesc, hDescriptor); // TODO: Figure out why this line breaks
+
+	// SAM ADDED // TODO: Figure out why these lines break it NOTE: Seems to be a number of descriptors thing. This works if I comment out the next descriptor. Must be hardcoding the number. The order matters! (Changing the order changes what the water renders as)
+	// descriptor 4
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = bricksTex->GetDesc().Format;
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	srvDesc.Texture2D.MostDetailedMip = 0;
+	srvDesc.Texture2D.MipLevels = -1;
+	
+	//srvDesc.Texture2D.MipLevels = bricksTex->GetDesc().MipLevels;
+	md3dDevice->CreateShaderResourceView(bricksTex.Get(), &srvDesc, hDescriptor);
+
+	// descriptor 5
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+
+	srvDesc.Format = checkerTex->GetDesc().Format;
+	md3dDevice->CreateShaderResourceView(checkerTex.Get(), &srvDesc, hDescriptor);
+
+	// descriptor 6
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+
+	srvDesc.Format = pixelWoodTex->GetDesc().Format;
+	md3dDevice->CreateShaderResourceView(pixelWoodTex.Get(), &srvDesc, hDescriptor);
+
+
 }
 
 void TreeBillboardsApp::BuildShadersAndInputLayouts()
@@ -1133,6 +1196,9 @@ void TreeBillboardsApp::BuildMaterials()
 	grass->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	grass->Roughness = 0.125f;
 
+
+
+
 	// This is not a good water material definition, but we do not have all the rendering
 	// tools we need (transparency, environment reflection), so we fake it for now.
 	auto water = std::make_unique<Material>();
@@ -1159,17 +1225,47 @@ void TreeBillboardsApp::BuildMaterials()
 	treeSprites->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	treeSprites->Roughness = 0.125f;
 
+	// SAM ADDED
+	auto bricks = std::make_unique<Material>();
+	bricks->Name = "bricks";
+	bricks->MatCBIndex = 4;
+	bricks->DiffuseSrvHeapIndex = 4;
+	bricks->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	bricks->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
+	bricks->Roughness = 0.125f;
+
+	auto checker = std::make_unique<Material>();
+	checker->Name = "checker";
+	checker->MatCBIndex = 5;
+	checker->DiffuseSrvHeapIndex = 5;
+	checker->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	checker->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
+	checker->Roughness = 0.125f;
+
+
+	auto pixelWood = std::make_unique<Material>();
+	pixelWood->Name = "checker";
+	pixelWood->MatCBIndex = 6;
+	pixelWood->DiffuseSrvHeapIndex = 5;
+	pixelWood->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	pixelWood->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
+	pixelWood->Roughness = 0.125f;
+
 	mMaterials["grass"] = std::move(grass);
 	mMaterials["water"] = std::move(water);
 	mMaterials["wirefence"] = std::move(wirefence);
 	mMaterials["treeSprites"] = std::move(treeSprites);
+	mMaterials["bricks"] = std::move(bricks);
+	mMaterials["checker"] = std::move(checker);
+	mMaterials["pixelWood"] = std::move(pixelWood);
+
 }
 
 void TreeBillboardsApp::BuildRenderItems()
 {
     auto wavesRitem = std::make_unique<RenderItem>();
     wavesRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
+	XMStoreFloat4x4(&wavesRitem->TexTransform, XMMatrixScaling(55.0f, 55.0f, 1.0f));
 	wavesRitem->ObjCBIndex = 0;
 	wavesRitem->Mat = mMaterials["water"].get();
 	wavesRitem->Geo = mGeometries["waterGeo"].get();
@@ -1184,7 +1280,7 @@ void TreeBillboardsApp::BuildRenderItems()
 
     auto gridRitem = std::make_unique<RenderItem>();
     gridRitem->World = MathHelper::Identity4x4();
-	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(5.0f, 5.0f, 1.0f));
+	XMStoreFloat4x4(&gridRitem->TexTransform, XMMatrixScaling(55.0f, 55.0f, 1.0f));
 	gridRitem->ObjCBIndex = 1;
 	gridRitem->Mat = mMaterials["grass"].get();
 	gridRitem->Geo = mGeometries["landGeo"].get();
@@ -1226,14 +1322,14 @@ void TreeBillboardsApp::BuildRenderItems()
 #define ADDRITEM(x) mAllRitems.emplace_back(std::make_unique<RenderItem>x); mRitemLayer[(int)RenderLayer::Opaque].push_back(mAllRitems.back().get())
 	//ADDRITEM(("grid", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, -5.0f, 0.0f)));
 	// Body:
-	ADDRITEM(("cylinder", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 2.0f, 0.0f)));
-	ADDRITEM(("nCyl10_9", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(10.0f, 2.0f, 10.0f) * XMMatrixTranslation(0.0f, 5.0f, 0.0f)));
-	ADDRITEM(("cylinder", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(9.0f, 3.0f, 9.0f) * XMMatrixTranslation(0.0f, 7.5f, 0.0f)));
-	ADDRITEM(("nCyl9_5", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 11.0f, 0.0f)));
+	ADDRITEM(("cylinder", oI++, mMaterials["checker"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 2.0f, 0.0f)));
+	ADDRITEM(("nCyl10_9", oI++, mMaterials["bricks"].get(), geo, XMMatrixScaling(10.0f, 2.0f, 10.0f) * XMMatrixTranslation(0.0f, 5.0f, 0.0f)));
+	ADDRITEM(("cylinder", oI++, mMaterials["bricks"].get(), geo, XMMatrixScaling(9.0f, 3.0f, 9.0f) * XMMatrixTranslation(0.0f, 7.5f, 0.0f)));
+	ADDRITEM(("nCyl9_5", oI++, mMaterials["bricks"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 11.0f, 0.0f)));
 	// Peak:
-	ADDRITEM(("cone", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(5.0f, 10.0f, 5.0f) * XMMatrixTranslation(0.0f, 18.0f, 0.0f)));
-	ADDRITEM(("torus", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, 17.0f, 0.0f)));
-	ADDRITEM(("torus", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0.0f, 19.0f, 0.0f)));
+	ADDRITEM(("cone", oI++, mMaterials["pixelWood"].get(), geo, XMMatrixScaling(5.0f, 10.0f, 5.0f) * XMMatrixTranslation(0.0f, 18.0f, 0.0f)));
+	ADDRITEM(("torus", oI++, mMaterials["bricks"].get(), geo, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, 17.0f, 0.0f)));
+	ADDRITEM(("torus", oI++, mMaterials["bricks"].get(), geo, XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0.0f, 19.0f, 0.0f)));
 	// Spires:
 	UINT numSpires = 8;
 	float thetaStep = XM_2PI / numSpires;
@@ -1241,9 +1337,9 @@ void TreeBillboardsApp::BuildRenderItems()
 	{
 		float zOffset = cosf(thetaStep * i) * 10.0f;
 		float xOffset = sinf(thetaStep * i) * 10.0f;
-		ADDRITEM(("triangularPrism", oI++, mMaterials["grass"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(0.5f, 10.5f, 0.5f) * XMMatrixTranslation(7.1f, 5.25f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
-		ADDRITEM(("pyramid", oI++, mMaterials["grass"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(7.1f, 11.0f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
-		ADDRITEM(("box", oI++, mMaterials["grass"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(3.0f, 2.0f, 3.0f) * XMMatrixTranslation(0.1f, 10.0f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
+		ADDRITEM(("triangularPrism", oI++, mMaterials["bricks"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(0.5f, 10.5f, 0.5f) * XMMatrixTranslation(7.1f, 5.25f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
+		ADDRITEM(("pyramid", oI++, mMaterials["bricks"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(7.1f, 11.0f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
+		ADDRITEM(("box", oI++, mMaterials["bricks"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(3.0f, 2.0f, 3.0f) * XMMatrixTranslation(0.1f, 10.0f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
 	}
 	// Ramp:
 	ADDRITEM(("wedge", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(3.0f, 1.0f, 4.0f) * XMMatrixTranslation(0.0f, 0.5f, -11.25f) * XMMatrixRotationY(thetaStep * 0.5)));
