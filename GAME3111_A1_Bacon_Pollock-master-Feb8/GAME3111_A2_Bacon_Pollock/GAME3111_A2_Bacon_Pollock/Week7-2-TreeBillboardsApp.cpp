@@ -23,10 +23,11 @@ const int gNumFrameResources = 3;
 struct RenderItem
 {
 	RenderItem() = default;
-	RenderItem(std::string name, UINT objIndex, std::unique_ptr<Material>::pointer mat, std::unique_ptr<MeshGeometry>::pointer meshGeo, DirectX::XMMATRIX world = XMMatrixIdentity())
+	RenderItem(std::string name, UINT objIndex, std::unique_ptr<Material>::pointer mat, std::unique_ptr<MeshGeometry>::pointer meshGeo, DirectX::XMMATRIX world = XMMatrixIdentity(), DirectX::XMMATRIX texWorld = XMMatrixIdentity())
 	{
 		World = MathHelper::Identity4x4();
 		XMStoreFloat4x4(&World, world);
+		XMStoreFloat4x4(&TexTransform, texWorld);
 		ObjCBIndex = objIndex;
 		Mat = mat;
 		Geo = meshGeo;
@@ -503,11 +504,7 @@ void TreeBillboardsApp::UpdateMainPassCB(const GameTimer& gt)
 	mMainPassCB.DeltaTime = gt.DeltaTime();
 	mMainPassCB.AmbientLight = { 0.1f, 0.1f, 0.1f, 1.0f };
 	mMainPassCB.Lights[0].Direction = { 1, -0.57735f, 0};
-	mMainPassCB.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
-	mMainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
-	mMainPassCB.Lights[1].Strength = { 0.0f, 0.0f, 0.0f };
-	mMainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-	mMainPassCB.Lights[2].Strength = { 0.0f, 0.0f, 0.0f };
+	mMainPassCB.Lights[0].Strength = { 0.6f, 0.5f, 0.4f };
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
@@ -578,6 +575,15 @@ void TreeBillboardsApp::LoadTextures()
 		mCommandList.Get(), checkerTex->Filename.c_str(),
 		checkerTex->Resource, checkerTex->UploadHeap));
 
+	// Kiera added
+	auto pixelSwirlTex = std::make_unique<Texture>();
+	pixelSwirlTex->Name = "pixelSwirlTex";
+	pixelSwirlTex->Filename = L"../../Textures/A2_Pixel_Swirl.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), pixelSwirlTex->Filename.c_str(),
+		pixelSwirlTex->Resource, pixelSwirlTex->UploadHeap));
+
+	// Sam added
 	auto pixelWoodTex = std::make_unique<Texture>();
 	pixelWoodTex->Name = "pixelWoodTex";
 	pixelWoodTex->Filename = L"../../Textures/A2_Pixel_Wood.dds";
@@ -650,6 +656,7 @@ void TreeBillboardsApp::LoadTextures()
 	mTextures[bricksTex->Name] = std::move(bricksTex);	// SAM ADDED
 	mTextures[checkerTex->Name] = std::move(checkerTex);	// SAM ADDED
 	mTextures[pixelWoodTex->Name] = std::move(pixelWoodTex);
+	mTextures[pixelSwirlTex->Name] = std::move(pixelSwirlTex); // Kiera added
 	mTextures[pixelStone1Tex->Name] = std::move(pixelStone1Tex);
 	mTextures[pixelStone2Tex->Name] = std::move(pixelStone2Tex);
 	mTextures[pixelStone3Tex->Name] = std::move(pixelStone3Tex);
@@ -705,7 +712,7 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 12;
+	srvHeapDesc.NumDescriptors = 13;
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
@@ -722,6 +729,7 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	auto bricksTex = mTextures["bricksTex"]->Resource;	// SAM ADDED
 	auto checkerTex = mTextures["checkerTex"]->Resource;	// SAM ADDED
 	auto pixelWoodTex = mTextures["pixelWoodTex"]->Resource;
+	auto pixelSwirlTex = mTextures["pixelSwirlTex"]->Resource; // Kiera added
 
 	auto pixelStone1Tex = mTextures["pixelStone1Tex"]->Resource;
 	auto pixelStone2Tex = mTextures["pixelStone2Tex"]->Resource;
@@ -793,28 +801,34 @@ void TreeBillboardsApp::BuildDescriptorHeaps()
 	// descriptor 7
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
+	srvDesc.Format = pixelSwirlTex->GetDesc().Format;
+	md3dDevice->CreateShaderResourceView(pixelSwirlTex.Get(), &srvDesc, hDescriptor);
+
+	// descriptor 8
+	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+
 	srvDesc.Format = pixelStone1Tex->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(pixelStone1Tex.Get(), &srvDesc, hDescriptor);
 
-	// descriptor 8
+	// descriptor 9
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	srvDesc.Format = pixelStone2Tex->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(pixelStone2Tex.Get(), &srvDesc, hDescriptor);
 
-	// descriptor 9
+	// descriptor 10
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	srvDesc.Format = pixelStone3Tex->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(pixelStone3Tex.Get(), &srvDesc, hDescriptor);
 
-	// descriptor 10
+	// descriptor 11
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	srvDesc.Format = pixelYellowBrickTex->GetDesc().Format;
 	md3dDevice->CreateShaderResourceView(pixelYellowBrickTex.Get(), &srvDesc, hDescriptor);
 
-	// descriptor 11
+	// descriptor 12
 	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
 
 	srvDesc.Format = pixelFireTex->GetDesc().Format;
@@ -1099,26 +1113,34 @@ void TreeBillboardsApp::BuildTreeSpritesGeometry()
 		XMFLOAT2 Size;
 	};
 
-	static const int treeCount = 16;
-	std::array<TreeSpriteVertex, 16> vertices;
+	static const int treeCount = 256;
+	std::array<TreeSpriteVertex, treeCount> vertices;
 	for(UINT i = 0; i < treeCount; ++i)
 	{
-		float x = MathHelper::RandF(-45.0f, 45.0f);
-		float z = MathHelper::RandF(-45.0f, 45.0f);
+		float a1 = 75.0f;
+		float x = MathHelper::RandF(-a1, a1);
+		float z = MathHelper::RandF(-a1, a1);
+		float a2 = 10.0f;
+		while ((x > -a2 && x < a2) && (z > -a2 && z < a2) || GetHillsHeight(x, z) < -0.0f)
+		{
+			x = MathHelper::RandF(-a1, a1);
+			z = MathHelper::RandF(-a1, a1);
+		}
+
 		float y = GetHillsHeight(x, z);
 
 		// Move tree slightly above land height.
-		y += 8.0f;
+		y += 4.0f;
 
 		vertices[i].Pos = XMFLOAT3(x, y, z);
-		vertices[i].Size = XMFLOAT2(20.0f, 20.0f);
+		vertices[i].Size = XMFLOAT2(10.0f, 10.0f);
 	}
 
-	std::array<std::uint16_t, 16> indices =
+	std::array<std::uint16_t, treeCount> indices;
+	for (std::uint16_t i = 0; i < treeCount; i++)
 	{
-		0, 1, 2, 3, 4, 5, 6, 7,
-		8, 9, 10, 11, 12, 13, 14, 15
-	};
+		indices[i] = i;
+	}
 
 	const UINT vbByteSize = (UINT)vertices.size() * sizeof(TreeSpriteVertex);
 	const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
@@ -1327,42 +1349,50 @@ void TreeBillboardsApp::BuildMaterials()
 	pixelWood->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	pixelWood->Roughness = 0.125f;
 
+	auto pixelSwirl = std::make_unique<Material>();
+	pixelSwirl->Name = "pixelSwirl";
+	pixelSwirl->MatCBIndex = 7;
+	pixelSwirl->DiffuseSrvHeapIndex = 7;
+	pixelSwirl->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	pixelSwirl->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
+	pixelSwirl->Roughness = 0.125f;
+
 	auto pixelStone1 = std::make_unique<Material>();
 	pixelStone1->Name = "pixelStone1";
-	pixelStone1->MatCBIndex = 7;
-	pixelStone1->DiffuseSrvHeapIndex = 7;
+	pixelStone1->MatCBIndex = 8;
+	pixelStone1->DiffuseSrvHeapIndex = 8;
 	pixelStone1->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	pixelStone1->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	pixelStone1->Roughness = 0.125f;
 
 	auto pixelStone2 = std::make_unique<Material>();
 	pixelStone2->Name = "pixelStone2";
-	pixelStone2->MatCBIndex = 8;
-	pixelStone2->DiffuseSrvHeapIndex = 8;
+	pixelStone2->MatCBIndex = 9;
+	pixelStone2->DiffuseSrvHeapIndex = 9;
 	pixelStone2->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	pixelStone2->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	pixelStone2->Roughness = 0.125f;
 
 	auto pixelStone3 = std::make_unique<Material>();
 	pixelStone3->Name = "pixelStone3";
-	pixelStone3->MatCBIndex = 9;
-	pixelStone3->DiffuseSrvHeapIndex = 9;
+	pixelStone3->MatCBIndex = 10;
+	pixelStone3->DiffuseSrvHeapIndex = 10;
 	pixelStone3->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	pixelStone3->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	pixelStone3->Roughness = 0.125f;
 
 	auto pixelYellowBrick = std::make_unique<Material>();
 	pixelYellowBrick->Name = "pixelYellowBrick";
-	pixelYellowBrick->MatCBIndex = 10;
-	pixelYellowBrick->DiffuseSrvHeapIndex = 10;
+	pixelYellowBrick->MatCBIndex = 11;
+	pixelYellowBrick->DiffuseSrvHeapIndex = 11;
 	pixelYellowBrick->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	pixelYellowBrick->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	pixelYellowBrick->Roughness = 0.125f;
 
 	auto pixelFire = std::make_unique<Material>();
 	pixelFire->Name = "pixelFire";
-	pixelFire->MatCBIndex = 11;
-	pixelFire->DiffuseSrvHeapIndex = 11;
+	pixelFire->MatCBIndex = 12;
+	pixelFire->DiffuseSrvHeapIndex = 12;
 	pixelFire->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	pixelFire->FresnelR0 = XMFLOAT3(0.01f, 0.01f, 0.01f);
 	pixelFire->Roughness = 0.125f;
@@ -1374,6 +1404,7 @@ void TreeBillboardsApp::BuildMaterials()
 	mMaterials["bricks"] = std::move(bricks);
 	mMaterials["checker"] = std::move(checker);
 	mMaterials["pixelWood"] = std::move(pixelWood);
+	mMaterials["pixelSwirl"] = std::move(pixelSwirl);
 
 	mMaterials["pixelStone1"] = std::move(pixelStone1);
 	mMaterials["pixelStone2"] = std::move(pixelStone2);
@@ -1441,18 +1472,27 @@ void TreeBillboardsApp::BuildRenderItems()
 
 
 	UINT oI = 3;
+	UINT numLights = 1;
 	auto geo = mGeometries["shapeGeo"].get();
 #define ADDRITEM(x) mAllRitems.emplace_back(std::make_unique<RenderItem>x); mRitemLayer[(int)RenderLayer::Opaque].push_back(mAllRitems.back().get())
 	//ADDRITEM(("grid", oI++, mMaterials["grass"].get(), geo, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, -5.0f, 0.0f)));
 	// Body:
-	ADDRITEM(("cylinder", oI++, mMaterials["pixelStone1"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 2.0f, 0.0f)));
-	ADDRITEM(("nCyl10_9", oI++, mMaterials["pixelYellowBrick"].get(), geo, XMMatrixScaling(10.0f, 2.0f, 10.0f) * XMMatrixTranslation(0.0f, 5.0f, 0.0f)));
-	ADDRITEM(("cylinder", oI++, mMaterials["pixelStone2"].get(), geo, XMMatrixScaling(9.0f, 3.0f, 9.0f) * XMMatrixTranslation(0.0f, 7.5f, 0.0f)));
-	ADDRITEM(("nCyl9_5", oI++, mMaterials["pixelStone3"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 11.0f, 0.0f)));
+	ADDRITEM(("cylinder", oI++, mMaterials["pixelStone1"].get(), geo, XMMatrixScaling(10.0f, 8.0f, 10.0f) * XMMatrixTranslation(0.0f, 0.0f, 0.0f), XMMatrixScaling(10.0f, 2.0f, 10.0f)));
+	ADDRITEM(("nCyl10_9", oI++, mMaterials["pixelYellowBrick"].get(), geo, XMMatrixScaling(10.0f, 2.0f, 10.0f) * XMMatrixTranslation(0.0f, 5.0f, 0.0f), XMMatrixScaling(10.0f, 0.5f, 10.0f)));
+	ADDRITEM(("cylinder", oI++, mMaterials["pixelStone2"].get(), geo, XMMatrixScaling(9.0f, 3.0f, 9.0f) * XMMatrixTranslation(0.0f, 7.5f, 0.0f), XMMatrixScaling(9.0f, 0.75f, 9.0f)));
+	ADDRITEM(("nCyl9_5", oI++, mMaterials["pixelStone3"].get(), geo, XMMatrixScaling(10.0f, 4.0f, 10.0f) * XMMatrixTranslation(0.0f, 11.0f, 0.0f), XMMatrixScaling(10.0f, 1.5f, 10.0f)));
 	// Peak:
-	ADDRITEM(("cone", oI++, mMaterials["pixelWood"].get(), geo, XMMatrixScaling(5.0f, 10.0f, 5.0f) * XMMatrixTranslation(0.0f, 18.0f, 0.0f)));
-	ADDRITEM(("torus", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, 17.0f, 0.0f)));
-	ADDRITEM(("torus", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0.0f, 19.0f, 0.0f)));
+	ADDRITEM(("cone", oI++, mMaterials["pixelSwirl"].get(), geo, XMMatrixScaling(5.0f, 10.0f, 5.0f) * XMMatrixTranslation(0.0f, 18.0f, 0.0f)));
+	
+	// Add a light to the peak
+	mMainPassCB.Lights[numLights].Position = { 0.0f, 32.0f, 0.0f };
+	mMainPassCB.Lights[numLights].Strength = { 0.2f, 1.2f, 1.8f };
+	mMainPassCB.Lights[numLights].FalloffStart = 10.0f;
+	mMainPassCB.Lights[numLights].FalloffEnd = 40.0f;
+	numLights++;
+
+	ADDRITEM(("torus", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(0.0f, 17.0f, 0.0f), XMMatrixScaling(5.0f, 0.625f, 5.0f)));
+	ADDRITEM(("torus", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(4.0f, 4.0f, 4.0f) * XMMatrixTranslation(0.0f, 19.0f, 0.0f), XMMatrixScaling(4.0f, 0.5f, 4.0f)));
 	// Spires:
 	UINT numSpires = 8;
 	float thetaStep = XM_2PI / numSpires;
@@ -1460,15 +1500,55 @@ void TreeBillboardsApp::BuildRenderItems()
 	{
 		float zOffset = cosf(thetaStep * i) * 10.0f;
 		float xOffset = sinf(thetaStep * i) * 10.0f;
-		ADDRITEM(("triangularPrism", oI++, mMaterials["bricks"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(0.5f, 10.5f, 0.5f) * XMMatrixTranslation(7.1f, 5.25f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
+		ADDRITEM(("triangularPrism", oI++, mMaterials["bricks"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(0.5f, 14.5f, 0.5f) * XMMatrixTranslation(7.1f, 3.25f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
 		ADDRITEM(("pyramid", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(7.1f, 11.0f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
+
+		//XMStoreFloat3(&mMainPassCB.Lights[numLights].Position, XMVector3Transform({ 8.0f, 15.0f, 8.0f }, XMMatrixRotationY(thetaStep * i)));
+		mMainPassCB.Lights[numLights].Position = { xOffset, 14, zOffset };
+		mMainPassCB.Lights[numLights].Direction = { 0.0f, -1.0f, 0.0f };
+		mMainPassCB.Lights[numLights].Strength = { 6.0f, 0.4f, 0.0f };
+		mMainPassCB.Lights[numLights].FalloffStart = 0.0f;
+		mMainPassCB.Lights[numLights].FalloffEnd = 15.0f;
+		mMainPassCB.Lights[numLights].SpotPower = 30.0f;
+		numLights++;
+
 		ADDRITEM(("box", oI++, mMaterials["pixelWood"].get(), geo, XMMatrixRotationY(XM_PI / -4) * XMMatrixScaling(3.0f, 2.0f, 3.0f) * XMMatrixTranslation(0.1f, 10.0f, 7.1f) * XMMatrixRotationY(thetaStep * i)));
 	}
 	// Ramp:
-	ADDRITEM(("wedge", oI++, mMaterials["pixelYellowBrick"].get(), geo, XMMatrixScaling(3.0f, 1.0f, 4.0f) * XMMatrixTranslation(0.0f, 0.5f, -11.25f) * XMMatrixRotationY(thetaStep * 0.5)));
-	ADDRITEM(("diamond", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(0.5f, 2.0f, 0.5f) * XMMatrixTranslation(2.0f, 3.5f, -9.25f) * XMMatrixRotationY(thetaStep * 0.5)));
-	ADDRITEM(("diamond", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(0.5f, 2.0f, 0.5f) * XMMatrixTranslation(-2.0f, 3.5f, -9.25f) * XMMatrixRotationY(thetaStep * 0.5)));
-	ADDRITEM(("quad", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(3.2f, 1.3f, 0.5f) * XMMatrixTranslation(-4.8f, 6.5f, -9.25f) * XMMatrixRotationY(thetaStep * 0.5)));
+	auto rampRot = thetaStep * -0.5f;
+	ADDRITEM(("wedge", oI++, mMaterials["pixelYellowBrick"].get(), geo, XMMatrixScaling(3.0f, 1.0f, 4.0f) * XMMatrixTranslation(0.0f, 0.5f, -11.25f) * XMMatrixRotationY(rampRot)));
+	ADDRITEM(("diamond", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(0.5f, 2.0f, 0.5f) * XMMatrixTranslation(2.0f, 3.5f, -9.25f) * XMMatrixRotationY(rampRot), XMMatrixScaling(0.5f, 2.0f, 0.5f)));
+	ADDRITEM(("diamond", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(0.5f, 2.0f, 0.5f) * XMMatrixTranslation(-2.0f, 3.5f, -9.25f) * XMMatrixRotationY(rampRot), XMMatrixScaling(0.5f, 2.0f, 0.5f)));
+	ADDRITEM(("quad", oI++, mMaterials["pixelFire"].get(), geo, XMMatrixScaling(3.2f, 1.3f, 0.5f) * XMMatrixTranslation(-4.8f, 6.5f, -9.25f) * XMMatrixRotationY(rampRot)));
+
+	XMStoreFloat3(&mMainPassCB.Lights[numLights].Position, XMVector3Transform({ 2.0f, 3.5f, -9.6f }, XMMatrixRotationY(rampRot)));
+	mMainPassCB.Lights[numLights].Direction = { 0.0f, -1.0f, 0.0f };
+	mMainPassCB.Lights[numLights].Strength = { 6.0f, 4.0f, 1.0f };
+	mMainPassCB.Lights[numLights].FalloffStart = 0.0f;
+	mMainPassCB.Lights[numLights].FalloffEnd = 10.0f;
+	mMainPassCB.Lights[numLights].SpotPower = 10.0f;
+	numLights++;
+	XMStoreFloat3(&mMainPassCB.Lights[numLights].Position, XMVector3Transform({ 2.0f, 3.5f, -9.6f }, XMMatrixRotationY(rampRot)));
+	mMainPassCB.Lights[numLights].Direction = { 0.0f, 1.0f, 0.0f };
+	mMainPassCB.Lights[numLights].Strength = { 6.0f, 4.0f, 1.0f };
+	mMainPassCB.Lights[numLights].FalloffStart = 0.0f;
+	mMainPassCB.Lights[numLights].FalloffEnd = 10.0f;
+	mMainPassCB.Lights[numLights].SpotPower = 10.0f;
+	numLights++;
+	XMStoreFloat3(&mMainPassCB.Lights[numLights].Position, XMVector3Transform({ -2.0f, 3.0f, -9.6f }, XMMatrixRotationY(rampRot)));
+	mMainPassCB.Lights[numLights].Direction = { 0.0f, 1.0f, 0.0f };
+	mMainPassCB.Lights[numLights].Strength = { 6.0f, 4.0f, 1.0f };
+	mMainPassCB.Lights[numLights].FalloffStart = 0.0f;
+	mMainPassCB.Lights[numLights].FalloffEnd = 10.0f;
+	mMainPassCB.Lights[numLights].SpotPower = 10.0f;
+	numLights++;
+	XMStoreFloat3(&mMainPassCB.Lights[numLights].Position, XMVector3Transform({ -2.0f, 3.0f, -9.6f }, XMMatrixRotationY(rampRot)));
+	mMainPassCB.Lights[numLights].Direction = { 0.0f, -1.0f, 0.0f };
+	mMainPassCB.Lights[numLights].Strength = { 6.0f, 4.0f, 1.0f };
+	mMainPassCB.Lights[numLights].FalloffStart = 0.0f;
+	mMainPassCB.Lights[numLights].FalloffEnd = 10.0f;
+	mMainPassCB.Lights[numLights].SpotPower = 10.0f;
+	numLights++;
 
 	// Flagpole: 
 	ADDRITEM(("sphere", oI++, mMaterials["checker"].get(), geo, XMMatrixScaling(0.2f, 8.5f, 0.2f) * XMMatrixTranslation(-4.2f, 6.5f, -12.25f) * XMMatrixRotationY(thetaStep * 0.5)));
@@ -1572,7 +1652,7 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> TreeBillboardsApp::GetStaticSam
 
 float TreeBillboardsApp::GetHillsHeight(float x, float z)const
 {
-    return 0.3f*(z*sinf(0.1f*x) + x*cosf(0.1f*z));
+    return 0.15f*(z*sinf(0.1f*x) + x*cosf(0.1f*z));
 }
 
 XMFLOAT3 TreeBillboardsApp::GetHillsNormal(float x, float z)const

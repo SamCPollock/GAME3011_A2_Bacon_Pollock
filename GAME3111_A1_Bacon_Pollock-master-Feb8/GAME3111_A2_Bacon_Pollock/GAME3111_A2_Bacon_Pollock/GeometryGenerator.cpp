@@ -295,22 +295,22 @@ GeometryGenerator::MeshData GeometryGenerator::CreatePyramid(float width, float 
 
 	// Fill in the front face vertex data.
 	v[4] = Vertex(-w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[5] = Vertex(0.0f, +h2, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	v[5] = Vertex(0.0f, +h2, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 	v[6] = Vertex(+w2, -h2, -d2, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
 
 	// Fill in the back face vertex data.
 	v[7] = Vertex(-w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f);
 	v[8] = Vertex(+w2, -h2, +d2, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f);
-	v[9] = Vertex(0.0f, +h2, 0.0f, 0.0f, 0.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+	v[9] = Vertex(0.0f, +h2, 0.0f, 0.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
 
 	// Fill in the left face vertex data.
 	v[10] = Vertex(-w2, -h2, +d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f);
-	v[11] = Vertex(0.0f, +h2, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f);
+	v[11] = Vertex(0.0f, +h2, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f);
 	v[12] = Vertex(-w2, -h2, -d2, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f);
 
 	// Fill in the right face vertex data.
 	v[13] = Vertex(+w2, -h2, -d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f);
-	v[14] = Vertex(0.0f, +h2, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+	v[14] = Vertex(0.0f, +h2, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
 	v[15] = Vertex(+w2, -h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
 	meshData.Vertices.assign(&v[0], &v[16]);
@@ -363,12 +363,12 @@ GeometryGenerator::MeshData GeometryGenerator::CreateDiamond(float width, float 
 	float h2 = 0.5f * height;
 	float d2 = 0.5f * depth;
 
-	v[0] = Vertex(0.0f, h2, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);		// Peak
-	v[1] = Vertex(0.0f, 0.0f, d2, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);		// Front
-	v[2] = Vertex(w2, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);		// Right
-	v[3] = Vertex(0.0f, 0.0f, -d2, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);	// Back
-	v[4] = Vertex(-w2, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);	// Left
-	v[5] = Vertex(0.0f, -h2, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);	// Base
+	v[0] = Vertex(0.0f, h2, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f);		// Peak
+	v[1] = Vertex(0.0f, 0.0f, d2, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);		// Front
+	v[2] = Vertex(w2, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.5f);		// Right
+	v[3] = Vertex(0.0f, 0.0f, -d2, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.5f);	// Back
+	v[4] = Vertex(-w2, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f);	// Left
+	v[5] = Vertex(0.0f, -h2, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);	// Base
 
 	meshData.Vertices.assign(&v[0], &v[6]);
 
@@ -923,8 +923,10 @@ GeometryGenerator::MeshData GeometryGenerator::CreateCone(float radius, float he
 
 			vertex.Position = XMFLOAT3(r * c, y, r * s);
 
-			vertex.TexC.x = (float)j / sliceCount;
-			vertex.TexC.y = 1.0f - (float)i / stackCount;
+			//vertex.TexC.x = (float)j / sliceCount;
+			//vertex.TexC.y = 1.0f - (float)i / stackCount;
+			vertex.TexC.x = (radius * 0.5f) + (vertex.Position.x * 0.5f);
+			vertex.TexC.y = (radius * 0.5f) + (vertex.Position.z * 0.5f);
 
 			// This is unit length.
 			vertex.TangentU = XMFLOAT3(-s, 0.0f, c);
